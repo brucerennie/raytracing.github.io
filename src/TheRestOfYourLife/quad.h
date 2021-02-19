@@ -23,8 +23,11 @@ class quad : public hittable {
     {
         normal = unit_vector(cross(axis_A, axis_B));
         D = -dot(normal, plane_origin);
-        axis_A /= dot(axis_A, axis_A);
-        axis_B /= dot(axis_B, axis_B);
+        area = cross(axis_A, axis_B).length();
+
+        measure_A = axis_A / dot(axis_A, axis_A);
+        measure_B = axis_B / dot(axis_B, axis_B);
+
         set_bounding_box();
     }
 
@@ -61,8 +64,8 @@ class quad : public hittable {
         // Determine the hit point lies within the planar shape using its plane coordinates.
         auto intersection = r.at(t);
         vec3 planar_hitpt_vector = intersection - plane_origin;
-        auto a = dot(planar_hitpt_vector, axis_A);
-        auto b = dot(planar_hitpt_vector, axis_B);
+        auto a = dot(planar_hitpt_vector, measure_A) ;
+        auto b = dot(planar_hitpt_vector, measure_B);
 
         if (!hit_ab(a, b, rec))
             return false;
@@ -76,12 +79,31 @@ class quad : public hittable {
         return true;
     }
 
+    double pdf_value(const point3& origin, const vec3& v) const override {
+        auto r = ray(origin, v);
+        hit_record rec;
+        if (!this->hit(r, interval(0.001, infinity), rec))
+            return 0;
+
+        auto distance_squared = rec.t * rec.t * v.length_squared();
+        auto cosine = fabs(dot(v, rec.normal) / v.length());
+
+        return distance_squared / (cosine * area);
+    }
+
+    vec3 random(const point3& origin) const override {
+        auto p = plane_origin + (random_double() * axis_A) + (random_double() * axis_B);
+        return p - origin;
+    }
+
   protected:
     point3 plane_origin;
     vec3 axis_A, axis_B;
     shared_ptr<material> mat;
     vec3 normal;
     double D;
+    double area;
+    vec3 measure_A, measure_B;
     aabb bbox;
 };
 

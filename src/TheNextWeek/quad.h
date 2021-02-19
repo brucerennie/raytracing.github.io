@@ -23,8 +23,10 @@ class quad : public hittable {
     {
         normal = unit_vector(cross(axis_A, axis_B));
         D = -dot(normal, plane_origin);
-        axis_A /= dot(axis_A, axis_A);
-        axis_B /= dot(axis_B, axis_B);
+
+        measure_A = axis_A / dot(axis_A, axis_A);
+        measure_B = axis_B / dot(axis_B, axis_B);
+
         set_bounding_box();
     }
 
@@ -61,8 +63,8 @@ class quad : public hittable {
         // Determine the hit point lies within the planar shape using its plane coordinates.
         auto intersection = r.at(t);
         vec3 planar_hitpt_vector = intersection - plane_origin;
-        auto a = dot(planar_hitpt_vector, axis_A);
-        auto b = dot(planar_hitpt_vector, axis_B);
+        auto a = dot(planar_hitpt_vector, measure_A) ;
+        auto b = dot(planar_hitpt_vector, measure_B);
 
         if (!hit_ab(a, b, rec))
             return false;
@@ -82,6 +84,7 @@ class quad : public hittable {
     shared_ptr<material> mat;
     vec3 normal;
     double D;
+    vec3 measure_A, measure_B;
     aabb bbox;
 };
 
