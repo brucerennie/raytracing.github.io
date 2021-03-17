@@ -2251,7 +2251,110 @@ Which yields:
 
 
 
-Rectangles and Lights
+Quadrilaterals
+====================================================================================================
+
+Ray-Plane Intersection
+-----------------------
+
+
+Implementing Quadrilateral Primitives
+--------------------------------------
+Now, let’s make some rectangles. Rectangles are often convenient for modeling man-made environments.
+I’m a fan of doing axis-aligned rectangles because they are easy. (We’ll get to instancing so we can
+rotate them later.)
+
+<div class='together'>
+First, here is a rectangle in an xy plane. Such a plane is defined by its z value. For example, $z =
+k$. An axis-aligned rectangle is defined by the lines $x=x_0$, $x=x_1$, $y=y_0$, and $y=y_1$.
+
+  ![Figure [ray-rect]: Ray-rectangle intersection](../images/fig-2.05-ray-rect.jpg)
+
+</div>
+
+<div class='together'>
+To determine whether a ray hits such a rectangle, we first determine where the ray hits the plane.
+Recall that a ray $\mathbf{P}(t) = \mathbf{A} + t \mathbf{b}$ has its z component defined by $P_z(t)
+= A_z + t b_z$. Rearranging those terms we can solve for what the t is where $z=k$.
+
+  $$ t = \frac{k-A_z}{b_z} $$
+</div>
+
+<div class='together'>
+Once we have $t$, we can plug that into the equations for $x$ and $y$:
+
+  $$ x = A_x + t b_x $$
+  $$ y = A_y + t b_y $$
+</div>
+
+It is a hit if $x_0 < x < x_1$ and $y_0 < y < y_1$.
+
+Because our rectangles are axis-aligned, their bounding boxes will have an infinitely-thin side.
+This can be a problem when dividing them up with our axis-aligned bounding volume hierarchy. To
+counter this, all hittable objects should get a bounding box that has finite width along every
+dimension. For our rectangles, we'll just pad the box a bit on the infnitely-thin side.
+
+<div class='together'>
+The actual `xy_rect` class is thus:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    #ifndef AARECT_H
+    #define AARECT_H
+
+    #include "rtweekend.h"
+
+    #include "hittable.h"
+
+    class xy_rect : public hittable {
+      public:
+        xy_rect() {}
+
+        xy_rect(double _x0, double _x1, double _y0, double _y1, double _k, shared_ptr<material> _m)
+          : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mat(_m),
+            bbox(point3(x0, y0, k-0.0001), point3(x1, y1, k+0.0001))
+        {}
+
+        bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+            auto t = (k-r.origin().z()) / r.direction().z();
+            if (!ray_t.contains(t))
+                return false;
+
+            auto x = r.origin().x() + t*r.direction().x();
+            auto y = r.origin().y() + t*r.direction().y();
+            if (x < x0 || x1 < x || y < y0 || y1 < y)
+                return false;
+
+            rec.u = (x-x0)/(x1-x0);
+            rec.v = (y-y0)/(y1-y0);
+            rec.t = t;
+            auto outward_normal = vec3(0, 0, 1);
+            rec.set_face_normal(r, outward_normal);
+            rec.mat = mat;
+            rec.p = r.at(t);
+
+            return true;
+        }
+
+        aabb bounding_box() const override { return bbox; }
+
+      public:
+        double x0, x1, y0, y1, k;
+        shared_ptr<material> mat;
+        aabb bbox;
+    };
+
+    #endif
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [xy-rect]: <kbd>[aarect.h]</kbd> XY-plane rectangle objects]
+</div>
+
+
+More Planar Primitives
+-----------------------
+
+
+
+Lights
 ====================================================================================================
 Lighting is a key component of raytracing. Early simple raytracers used abstract light sources, like
 points in space, or directions. Modern approaches have more physically based lights, which have
@@ -2391,97 +2494,6 @@ skybox code versus the new solid color background. We're keeping it simple here.
 </div>
 
 
-Creating Rectangle Objects
----------------------------
-Now, let’s make some rectangles. Rectangles are often convenient for modeling man-made environments.
-I’m a fan of doing axis-aligned rectangles because they are easy. (We’ll get to instancing so we can
-rotate them later.)
-
-<div class='together'>
-First, here is a rectangle in an xy plane. Such a plane is defined by its z value. For example, $z =
-k$. An axis-aligned rectangle is defined by the lines $x=x_0$, $x=x_1$, $y=y_0$, and $y=y_1$.
-
-  ![Figure [ray-rect]: Ray-rectangle intersection](../images/fig-2.05-ray-rect.jpg)
-
-</div>
-
-<div class='together'>
-To determine whether a ray hits such a rectangle, we first determine where the ray hits the plane.
-Recall that a ray $\mathbf{P}(t) = \mathbf{A} + t \mathbf{b}$ has its z component defined by $P_z(t)
-= A_z + t b_z$. Rearranging those terms we can solve for what the t is where $z=k$.
-
-  $$ t = \frac{k-A_z}{b_z} $$
-</div>
-
-<div class='together'>
-Once we have $t$, we can plug that into the equations for $x$ and $y$:
-
-  $$ x = A_x + t b_x $$
-  $$ y = A_y + t b_y $$
-</div>
-
-It is a hit if $x_0 < x < x_1$ and $y_0 < y < y_1$.
-
-Because our rectangles are axis-aligned, their bounding boxes will have an infinitely-thin side.
-This can be a problem when dividing them up with our axis-aligned bounding volume hierarchy. To
-counter this, all hittable objects should get a bounding box that has finite width along every
-dimension. For our rectangles, we'll just pad the box a bit on the infnitely-thin side.
-
-<div class='together'>
-The actual `xy_rect` class is thus:
-
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    #ifndef AARECT_H
-    #define AARECT_H
-
-    #include "rtweekend.h"
-
-    #include "hittable.h"
-
-    class xy_rect : public hittable {
-      public:
-        xy_rect() {}
-
-        xy_rect(double _x0, double _x1, double _y0, double _y1, double _k, shared_ptr<material> _m)
-          : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mat(_m),
-            bbox(point3(x0, y0, k-0.0001), point3(x1, y1, k+0.0001))
-        {}
-
-        bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
-            auto t = (k-r.origin().z()) / r.direction().z();
-            if (!ray_t.contains(t))
-                return false;
-
-            auto x = r.origin().x() + t*r.direction().x();
-            auto y = r.origin().y() + t*r.direction().y();
-            if (x < x0 || x1 < x || y < y0 || y1 < y)
-                return false;
-
-            rec.u = (x-x0)/(x1-x0);
-            rec.v = (y-y0)/(y1-y0);
-            rec.t = t;
-            auto outward_normal = vec3(0, 0, 1);
-            rec.set_face_normal(r, outward_normal);
-            rec.mat = mat;
-            rec.p = r.at(t);
-
-            return true;
-        }
-
-        aabb bounding_box() const override { return bbox; }
-
-      public:
-        double x0, x1, y0, y1, k;
-        shared_ptr<material> mat;
-        aabb bbox;
-    };
-
-    #endif
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    [Listing [xy-rect]: <kbd>[aarect.h]</kbd> XY-plane rectangle objects]
-</div>
-
-
 Turning Objects into Lights
 ----------------------------
 <div class='together'>
@@ -2552,91 +2564,6 @@ Fool around with making some spheres lights too.
 
   ![Image 17: Scene with rectangle and sphere light sources
   ](../images/img-2.17-rect-sphere-light.png class=pixel)
-
-
-More Axis-Aligned Rectangles
------------------------------
-Now let’s add the other two axes and the famous Cornell Box.
-
-<div class='together'>
-This is xz and yz:
-
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    class xz_rect : public hittable {
-      public:
-        xz_rect() {}
-
-        xz_rect(double _x0, double _x1, double _z0, double _z1, double _k, shared_ptr<material> _m)
-          : x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mat(_m),
-            bbox(point3(x0, k-0.0001, z0), point3(x1, k+0.0001, z1))
-        {}
-
-        bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
-            auto t = (k-r.origin().y()) / r.direction().y();
-            if (!ray_t.contains(t))
-                return false;
-
-            auto x = r.origin().x() + t*r.direction().x();
-            auto z = r.origin().z() + t*r.direction().z();
-            if (x < x0 || x1 < x || z < z0 || z1 < z)
-                return false;
-
-            rec.u = (x-x0)/(x1-x0);
-            rec.v = (z-z0)/(z1-z0);
-            rec.t = t;
-            auto outward_normal = vec3(0, 1, 0);
-            rec.set_face_normal(r, outward_normal);
-            rec.mat = mat;
-            rec.p = r.at(t);
-
-            return true;
-        }
-
-        aabb bounding_box() const override { return bbox; }
-
-      public:
-        double x0, x1, z0, z1, k;
-        shared_ptr<material> mat;
-        aabb bbox;
-    };
-
-    class yz_rect : public hittable {
-      public:
-        yz_rect() {}
-
-        yz_rect(double _y0, double _y1, double _z0, double _z1, double _k, shared_ptr<material> _m)
-          : y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mat(_m),
-            bbox(point3(k-0.0001, y0, z0), point3(k+0.0001, y1, z1))
-        {}
-
-        bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
-            auto t = (k-r.origin().x()) / r.direction().x();
-            if (!ray_t.contains(t))
-                return false;
-            auto y = r.origin().y() + t*r.direction().y();
-            auto z = r.origin().z() + t*r.direction().z();
-            if (y < y0 || y1 < y || z < z0 || z1 < z)
-                return false;
-            rec.u = (y-y0)/(y1-y0);
-            rec.v = (z-z0)/(z1-z0);
-            rec.t = t;
-            auto outward_normal = vec3(1, 0, 0);
-            rec.set_face_normal(r, outward_normal);
-            rec.mat = mat;
-            rec.p = r.at(t);
-            return true;
-        }
-
-        aabb bounding_box() const override { return bbox; }
-
-      public:
-        double y0, y1, z0, z1, k;
-        shared_ptr<material> mat;
-        aabb bbox;
-    };
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    [Listing [xz-yz-rects]: <kbd>[aarect.h]</kbd> XZ and YZ rectangle objects]
-</div>
 
 
 Creating an Empty “Cornell Box”
