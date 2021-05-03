@@ -2253,9 +2253,55 @@ Which yields:
 
 Quadrilaterals
 ====================================================================================================
+We've managed to get more than half way through this three-book series using only spheres as our
+single primitive. Time to add our second primitive: the quadrilateral.
+
 
 Ray-Plane Intersection
 -----------------------
+Spheres are generally the first ray tracing primitive because their implicit formula makes it so
+easy to solve for ray intersection. Planes have an implicit formula as well, and ray-plane
+intersection is even _easier_ to solve.
+
+You may already know that the implicit formula for a plane:
+
+  $$ Ax + By + Cz + D = 0 $$
+
+That is, a plane is the set of all points $\mathbf{P} = (x,y,z)$ that satisfy the formula above. It
+makes things slightly easier to use the alternate formulation:
+
+  $$ Ax + By + Cz = D $$
+
+(The sign of D doesn't flip because it's just some constant we'll figure out later.)
+
+Here's another way to think of this formula: given the plane perpendicular to the normal vector
+$\mathbf{n} = (A,B,C)$ and the position vector $\mathbf{v} = (x,y,z)$ (that is, the vector from the
+origin to some the arbitrary point $(x,y,z)$), then
+
+  $$ \mathbf{n} \cdot \mathbf{v} = D $$
+
+Now to find the intersection with some ray $\mathbf{R}(t) = \mathbf{P} + t\mathbf{d}$. Plugging in
+the ray equation, we get
+
+  $$ \mathbf{n} \cdot ( \mathbf{P} + t \mathbf{d} ) = D $$
+
+Solving for $t$:
+
+  $$ \mathbf{n} \cdot \mathbf{P} + \mathbf{n} \cdot t \mathbf{d}  = D $$
+
+  $$ \mathbf{n} \cdot \mathbf{P} + t(\mathbf{n} \cdot \mathbf{d}) = D $$
+
+  $$ t = \frac{D - \mathbf{n} \cdot \mathbf{P}}{\mathbf{n} \cdot \mathbf{d}} $$
+
+This gives us $t$, which in turn can be used in the ray equation to find the point of intersection.
+
+
+Orienting Points on The Plane
+------------------------------
+So now we know how to find the intersection point between a ray and any location on the infinite
+plane. To actually restrict hits to a quadrilateral _region_ on the plane, or to assign texture
+coordinates to the point of intersection, we need to somehow orient the intersection point to the
+plane.
 
 
 Implementing Quadrilateral Primitives
