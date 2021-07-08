@@ -2253,8 +2253,8 @@ Which yields:
 
 Quadrilaterals
 ====================================================================================================
-We've managed to get more than half way through this three-book series using only spheres as our
-single primitive. Time to add our second primitive: the quadrilateral.
+We've managed to get more than half way through this three-book series using spheres as our only
+geometric primitive. Time to add our second primitive: the quadrilateral.
 
 
 Ray-Plane Intersection
@@ -2263,7 +2263,7 @@ Spheres are generally the first ray tracing primitive because their implicit for
 easy to solve for ray intersection. Planes have an implicit formula as well, and ray-plane
 intersection is even _easier_ to solve.
 
-You may already know that the implicit formula for a plane:
+You may already know this implicit formula for a plane:
 
   $$ Ax + By + Cz + D = 0 $$
 
@@ -2302,6 +2302,24 @@ So now we know how to find the intersection point between a ray and any location
 plane. To actually restrict hits to a quadrilateral _region_ on the plane, or to assign texture
 coordinates to the point of intersection, we need to somehow orient the intersection point to the
 plane.
+
+To do this, we'll construct a _coordinate frame_ for the plane -- a way of orienting points located
+on the plane. We've already been using a coordinate frame for our 3D space -- this is defined by an
+origin point $\mathbf{O}$ and three basis vectors $\mathbf{x}$, $\mathbf{y}$, and $\mathbf{z}$.
+
+Since a plane is a 2D construct, we just need a plane origin $\mathbf{O}$ and _two_ basis vectors:
+$\mathbf{u}$ and $\mathbf{v}$. Now normally, you see coordinates where each axis is perpendicular to
+the others, so they all meet at 90° angles. However, this doesn't need to be the case -- they just
+need to not be parallel to each other.
+
+  ![Figure [ray-plane]: Ray-plane intersection](../images/fig-2.05-ray-plane.jpg)
+
+Consider figure [ray-plane] as an example. Ray $\mathbf{R}$ intersects the plane, yielding
+intersection point $\mathbf{P}$. Measuring against plane vectors $\mathbf{u}$ and $\mathbf{v}$, the
+intersection point $\mathbf{P}$ is at $\mathbf{O} + (1)\mathbf{u} + (\frac{1}{2})\mathbf{v}$. In
+other words, the plane coordinates of intersection point $\mathbf{P}$ is $(1,\frac{1}{2})$.
+
+1
 
 
 Implementing Quadrilateral Primitives
