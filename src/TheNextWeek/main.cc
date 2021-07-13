@@ -325,26 +325,31 @@ void quad_test(scene& scene_desc) {
     scene_desc.max_depth         = 4;
 
     scene_desc.cam.aperture = 0.0;
-    scene_desc.cam.vfov     = 20.0;
+    scene_desc.cam.vfov     = 30.0;
     scene_desc.cam.lookfrom = point3(0,0,12);
     scene_desc.cam.lookat   = point3(0,0,0);
+
+    scene_desc.background   = color(0.80, 0.80, 0.80);
 
     auto earth_texture = make_shared<image_texture>("earthmap.jpg");
     auto mat = make_shared<lambertian>(earth_texture);
 
     shared_ptr<hittable> thing;
-    switch (0) {
+    switch (1) {
         default:
         case 0:
             thing = make_shared<quad>(point3(-2,-1,0), vec3(4,0,0), vec3(0,2,0), mat);
             break;
         case 1:
-            thing = make_shared<tri>(point3(-2,-1,0), vec3(4,0,0), vec3(0,2,0), mat);
+            thing = make_shared<quad>(point3(-2,-1,0), vec3(4,0,0), vec3(2,2,0), mat);
             break;
         case 2:
-            thing = make_shared<ellipse>(point3(0,0,0), vec3(2,0,0), vec3(0,1,0), mat);
+            thing = make_shared<tri>(point3(-2,-1,0), vec3(4,0,0), vec3(0,2,0), mat);
             break;
         case 3:
+            thing = make_shared<ellipse>(point3(0,0,0), vec3(2,0,0), vec3(0,1,0), mat);
+            break;
+        case 4:
             thing = make_shared<annulus>(point3(0,0,0), vec3(2,0,0), vec3(0,1,0), 0.25, mat);
             break;
     }
@@ -356,11 +361,11 @@ void quad_test(scene& scene_desc) {
 int main() {
     scene scene_desc;
 
-    scene_desc.background = color(0.70, 0.80, 1.00);
+    scene_desc.background = color(1.00, 1.00, 1.00);
     scene_desc.cam.vup = vec3(0,1,0);
     scene_desc.cam.focus_dist = 10.0;
 
-    switch (0) {
+    switch (100) {
         case 1:  random_spheres(scene_desc);     break;
         case 2:  two_spheres(scene_desc);        break;
         case 3:  earth(scene_desc);              break;
