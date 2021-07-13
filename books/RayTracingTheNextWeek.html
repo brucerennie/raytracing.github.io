@@ -2265,8 +2265,8 @@ geometric primitive. Time to add our second primitive: the quadrilateral.
 Ray-Plane Intersection
 -----------------------
 Spheres are generally the first ray tracing primitive because their implicit formula makes it so
-easy to solve for ray intersection. Planes have an implicit formula as well, and ray-plane
-intersection is even _easier_ to solve.
+easy to solve for ray intersection. Like spheres, planes also have an implicit formula, and
+ray-plane intersection is even _easier_ to solve.
 
 You may already know this implicit formula for a plane:
 
@@ -2277,7 +2277,7 @@ makes things slightly easier to use the alternate formulation:
 
   $$ Ax + By + Cz = D $$
 
-(The sign of D doesn't flip because it's just some constant we'll figure out later.)
+(We didnt' flip the sign of D because it's just some constant we'll figure out later.)
 
 Here's another way to think of this formula: given the plane perpendicular to the normal vector
 $\mathbf{n} = (A,B,C)$ and the position vector $\mathbf{v} = (x,y,z)$ (that is, the vector from the
@@ -2324,7 +2324,92 @@ intersection point $\mathbf{P}$. Measuring against plane vectors $\mathbf{u}$ an
 intersection point $\mathbf{P}$ is at $\mathbf{O} + (1)\mathbf{u} + (\frac{1}{2})\mathbf{v}$. In
 other words, the plane coordinates of intersection point $\mathbf{P}$ is $(1,\frac{1}{2})$.
 
-1
+So now, given some arbitrary point $\mathbf{P}$, we seek two scalar values $\alpha$ and $\beta$, so
+that
+
+  $$ \mathbf{P} = \mathbf{O} + \alpha \mathbf{u} + \beta \mathbf{v} $$
+
+If $\mathbf{u}$ and $\mathbf{v}$ were guaranteed to be orthogonal to each other (forming a 90°
+angle), then this would be a simple matter of projecting $\mathbf{P}$ onto the two basis vectors
+$\mathbf{u}$ and $\mathbf{v}$. However, since they can form any angle (other than zero), the math's
+a little bit tricker.
+
+$$ \mathbf{P} = \mathbf{O} + \alpha \mathbf{u} + \beta \mathbf{v}$$
+
+$$ \mathbf{p} = \mathbf{P} - \mathbf{O} = \alpha \mathbf{u} + \beta \mathbf{v} $$
+
+Cross these equations with $\mathbf{u}$ and $\mathbf{v}$, respectively:
+
+$$ \begin{align*}
+   \mathbf{u} \times \mathbf{p} &= \mathbf{u} \times (\alpha \mathbf{u} + \beta \mathbf{v}) \\
+   &= \mathbf{u} \times \alpha \mathbf{u} + \mathbf{u} \times \beta \mathbf{v} \\
+   &= \alpha(\mathbf{u} \times \mathbf{u}) + \beta(\mathbf{u} \times \mathbf{v})
+   \end{align*} $$
+
+$$ \begin{align*}
+   \mathbf{v} \times \mathbf{p} &= \mathbf{v} \times (\alpha \mathbf{u} + \beta \mathbf{v}) \\
+   &= \mathbf{v} \times \alpha \mathbf{u} + \mathbf{v} \times \beta \mathbf{v} \\
+   &= \alpha(\mathbf{v} \times \mathbf{u}) + \beta(\mathbf{v} \times \mathbf{v})
+   \end{align*} $$
+
+Since any vector crossed with itself yields zero, these equations simplify to
+
+$$ \mathbf{u} \times \mathbf{p} = \beta(\mathbf{u} \times \mathbf{v}) $$
+$$ \mathbf{v} \times \mathbf{p} = \alpha(\mathbf{v} \times \mathbf{u}) $$
+
+To solve for the coefficients $\alpha$ and $\beta$, we can take the dot product of both sides with
+the plane normal $\mathbf{n}$, reducing both sides to scalars.
+
+$$ \mathbf{n} = \mathbf{u} \times \mathbf{v} $$
+
+$$ \mathbf{n} \cdot (\mathbf{u} \times \mathbf{p})
+   = \mathbf{n} \cdot \beta(\mathbf{u} \times \mathbf{v}) $$
+
+$$ \mathbf{n} \cdot (\mathbf{v} \times \mathbf{p})
+   = \mathbf{n} \cdot \alpha(\mathbf{v} \times \mathbf{u}) $$
+
+Now isolating the coefficients is a simple matter of division:
+
+$$ \alpha = \frac{\mathbf{n} \cdot (\mathbf{v} \times \mathbf{p})}
+                 {\mathbf{n} \cdot (\mathbf{v} \times \mathbf{u})} $$
+
+$$ \beta  = \frac{\mathbf{n} \cdot (\mathbf{u} \times \mathbf{p})}
+                 {\mathbf{n} \cdot (\mathbf{u} \times \mathbf{v})} $$
+
+Reversing the cross products for both the numerator and denominator of $\alpha$ gives us a common
+denominator for both coefficients (recall that
+$\mathbf{a} \times \mathbf{b} = - \mathbf{b} \times \mathbf{a}$):
+
+$$ \alpha = \frac{\mathbf{n} \cdot (\mathbf{p} \times \mathbf{v})}
+                 {\mathbf{n} \cdot (\mathbf{u} \times \mathbf{v})} $$
+
+$$ \beta  = \frac{\mathbf{n} \cdot (\mathbf{u} \times \mathbf{p})}
+                 {\mathbf{n} \cdot (\mathbf{u} \times \mathbf{v})} $$
+
+Now we can perform one final simplification, computing a vector $\mathbf{w}$ that will be constant
+for the basis frame, for any planar point $\mathbf{P}$:
+
+$$ \mathbf{w} = \frac{\mathbf{n}}{\mathbf{n} \cdot (\mathbf{u} \times \mathbf{v})}
+              = \frac{\mathbf{n}}{\mathbf{n} \cdot \mathbf{n}}$$
+
+$$ \alpha = \mathbf{w} \cdot (\mathbf{p} \times \mathbf{v}) $$
+$$ \beta  = \mathbf{w} \cdot (\mathbf{u} \times \mathbf{p}) $$
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
 
 
 Implementing Quadrilateral Primitives
