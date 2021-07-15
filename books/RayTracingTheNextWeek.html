@@ -2300,22 +2300,68 @@ Solving for $t$:
 
 This gives us $t$, which in turn can be used in the ray equation to find the point of intersection.
 
+Ok, we can find the point of intersection between a ray and a plane. This will help us determine
+whether a ray hits a given quadrilateral, using the plane that contains the (planar) quadrilateral.
+In fact, we can use this approach to define any planar primitive, like triangles and disks (more
+later).
+
+We now have three questions we must answer:
+
+1. How do we define the quadrilateral in three dimensional space?
+2. How do we find the plane that contains the quadrilateral?
+3. How do we orient the ray-plane intersection point with the quadrilateral?
+
+
+Defining the Quadrilateral
+---------------------------
+For our purposes, we'll use three geometric entities to define a quadrilateral. Remember that when
+we say "quadrilateral" here, we're really talking about parallelograms, a specific kind of
+quadrilateral where opposite sides are parallel. These three entities are
+
+1. $\mathbf{O}$, the lower-left corner of the quadrilateral.
+2. $\mathbf{u}$, a vector representing the X axis of the quadrilateral. $\mathbf{O} + \mathbf{u}$
+   gives the lower right corner.
+3. $\mathbf{v}$, a vector representing the Y axis of the quadrilateral. $\mathbf{O} + \mathbf{v}$
+   gives the upper left corner.
+
+These values are three-dimensional, even though a quad itself is a two-dimensional object.
+
+
+Finding the Plane Constants For a Given Quadrilateral
+------------------------------------------------------
+We have $O$, $u$, and $v$, and want the corresponding equation of the plane containing all three of
+these values (and thus the quad itself).
+
+Fortunately, this is very simple. Recall that in $Ax + By + Cz = D$, $(A,B,C)$ represents the
+normal vector. To get this, we just use the cross product of the two side vectors $u$ and $v$:
+
+  $$ \mathbf{n} = \text{unit_vector}(\mathbf{u} \times \mathbf{v}) $$
+
+The plane is defined as all points $(x,y,z)$ that satisfy the equation $Ax + By + Cz = D$. Well, we
+know that $\mathbf{O}$ lies on the plane, so we can use that to find $D$:
+
+  $$ D = \mathbf{n}_x\mathbf{O}_x + \mathbf{n}_y\mathbf{O}_y + \mathbf{n}_z\mathbf{O}_z $$
+
+We can now use these two values $\mathbf{n}$ and $D$ to find the point of intersection with a given
+ray and the plane containing the quadrilateral.
+
 
 Orienting Points on The Plane
 ------------------------------
-So now we know how to find the intersection point between a ray and any location on the infinite
-plane. To actually restrict hits to a quadrilateral _region_ on the plane, or to assign texture
-coordinates to the point of intersection, we need to somehow orient the intersection point to the
-plane.
+At this stage, the intersection point is on the plane that contains the quadrilateral, but it could
+be _anywhere_ on the plane, and may lie inside or outside the quadrilateral. We need to determine if
+the intersection lies inside (hits) the quadrilateral, and reject points that lie outside (miss) the
+quad. To determine where a point lies relative to the quad, and to assign texture coordinates to the
+point of intersection, we need to somehow orient the intersection point on the plane.
 
 To do this, we'll construct a _coordinate frame_ for the plane -- a way of orienting points located
 on the plane. We've already been using a coordinate frame for our 3D space -- this is defined by an
 origin point $\mathbf{O}$ and three basis vectors $\mathbf{x}$, $\mathbf{y}$, and $\mathbf{z}$.
 
-Since a plane is a 2D construct, we just need a plane origin $\mathbf{O}$ and _two_ basis vectors:
-$\mathbf{u}$ and $\mathbf{v}$. Now normally, you see coordinates where each axis is perpendicular to
-the others, so they all meet at 90° angles. However, this doesn't need to be the case -- they just
-need to not be parallel to each other.
+Since a plane is a 2D construct, we just need a plane origin point $\mathbf{O}$ and _two_ basis
+vectors: $\mathbf{u}$ and $\mathbf{v}$. Now normally, you see axes that are perpendicular to each
+other, so they all meet at 90° angles. However, this doesn't need to be the case in order to span
+the entire space -- you just can't have two axes that are parallel to each other.
 
   ![Figure [ray-plane]: Ray-plane intersection](../images/fig-2.05-ray-plane.jpg)
 
@@ -2324,21 +2370,24 @@ intersection point $\mathbf{P}$. Measuring against plane vectors $\mathbf{u}$ an
 intersection point $\mathbf{P}$ is at $\mathbf{O} + (1)\mathbf{u} + (\frac{1}{2})\mathbf{v}$. In
 other words, the plane coordinates of intersection point $\mathbf{P}$ is $(1,\frac{1}{2})$.
 
-So now, given some arbitrary point $\mathbf{P}$, we seek two scalar values $\alpha$ and $\beta$, so
-that
+Generally, given some arbitrary point $\mathbf{P}$, we seek two scalar values $\alpha$ and $\beta$,
+so that
 
   $$ \mathbf{P} = \mathbf{O} + \alpha \mathbf{u} + \beta \mathbf{v} $$
 
 If $\mathbf{u}$ and $\mathbf{v}$ were guaranteed to be orthogonal to each other (forming a 90°
-angle), then this would be a simple matter of projecting $\mathbf{P}$ onto the two basis vectors
-$\mathbf{u}$ and $\mathbf{v}$. However, since they can form any angle (other than zero), the math's
-a little bit tricker.
+angle between them), then this would be a simple matter of projecting $\mathbf{P}$ onto the two
+basis vectors $\mathbf{u}$ and $\mathbf{v}$. However, since they can form any angle (other than
+zero), the math's a little bit tricker.
 
 $$ \mathbf{P} = \mathbf{O} + \alpha \mathbf{u} + \beta \mathbf{v}$$
 
 $$ \mathbf{p} = \mathbf{P} - \mathbf{O} = \alpha \mathbf{u} + \beta \mathbf{v} $$
 
-Cross these equations with $\mathbf{u}$ and $\mathbf{v}$, respectively:
+Here, $\mathbf{P}$ is the _point_ of intersection, and $\mathbf{p}$ is the _vector_ from
+$\mathbf{O}$ to $\mathbf{P}$.
+
+Cross the above equation with $\mathbf{u}$ and $\mathbf{v}$, respectively:
 
 $$ \begin{align*}
    \mathbf{u} \times \mathbf{p} &= \mathbf{u} \times (\alpha \mathbf{u} + \beta \mathbf{v}) \\
@@ -2357,10 +2406,9 @@ Since any vector crossed with itself yields zero, these equations simplify to
 $$ \mathbf{u} \times \mathbf{p} = \beta(\mathbf{u} \times \mathbf{v}) $$
 $$ \mathbf{v} \times \mathbf{p} = \alpha(\mathbf{v} \times \mathbf{u}) $$
 
-To solve for the coefficients $\alpha$ and $\beta$, we can take the dot product of both sides with
-the plane normal $\mathbf{n}$, reducing both sides to scalars.
-
-$$ \mathbf{n} = \mathbf{u} \times \mathbf{v} $$
+To solve for the coefficients $\alpha$ and $\beta$, we can take the dot product of both sides of the
+above equations with the plane normal $\mathbf{n} = \mathbf{u} \times \mathbf{v}$, reducing both
+sides to scalars.
 
 $$ \mathbf{n} \cdot (\mathbf{u} \times \mathbf{p})
    = \mathbf{n} \cdot \beta(\mathbf{u} \times \mathbf{v}) $$
@@ -2376,9 +2424,9 @@ $$ \alpha = \frac{\mathbf{n} \cdot (\mathbf{v} \times \mathbf{p})}
 $$ \beta  = \frac{\mathbf{n} \cdot (\mathbf{u} \times \mathbf{p})}
                  {\mathbf{n} \cdot (\mathbf{u} \times \mathbf{v})} $$
 
-Reversing the cross products for both the numerator and denominator of $\alpha$ gives us a common
-denominator for both coefficients (recall that
-$\mathbf{a} \times \mathbf{b} = - \mathbf{b} \times \mathbf{a}$):
+Reversing the cross products for both the numerator and denominator of $\alpha$ (recall that
+$\mathbf{a} \times \mathbf{b} = - \mathbf{b} \times \mathbf{a}$) gives us a common denominator for
+both coefficients:
 
 $$ \alpha = \frac{\mathbf{n} \cdot (\mathbf{p} \times \mathbf{v})}
                  {\mathbf{n} \cdot (\mathbf{u} \times \mathbf{v})} $$
@@ -2387,7 +2435,7 @@ $$ \beta  = \frac{\mathbf{n} \cdot (\mathbf{u} \times \mathbf{p})}
                  {\mathbf{n} \cdot (\mathbf{u} \times \mathbf{v})} $$
 
 Now we can perform one final simplification, computing a vector $\mathbf{w}$ that will be constant
-for the basis frame, for any planar point $\mathbf{P}$:
+for the plane's basis frame, for any planar point $\mathbf{P}$:
 
 $$ \mathbf{w} = \frac{\mathbf{n}}{\mathbf{n} \cdot (\mathbf{u} \times \mathbf{v})}
               = \frac{\mathbf{n}}{\mathbf{n} \cdot \mathbf{n}}$$
@@ -2396,24 +2444,15 @@ $$ \alpha = \mathbf{w} \cdot (\mathbf{p} \times \mathbf{v}) $$
 $$ \beta  = \mathbf{w} \cdot (\mathbf{u} \times \mathbf{p}) $$
 
 
-
-
-
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-
 Implementing Quadrilateral Primitives
 --------------------------------------
+
+  ![Figure [quad-coords]: Quadrilateral coordinates](../images/fig-2.06-quad-coords.jpg)
+
+
+                          @@@@@@@@@@@@@@@ @@@@@@@@@@@@@@@ @@@@@@@@@@@@@@@
+
+
 Now, let’s make some rectangles. Rectangles are often convenient for modeling man-made environments.
 I’m a fan of doing axis-aligned rectangles because they are easy. (We’ll get to instancing so we can
 rotate them later.)
