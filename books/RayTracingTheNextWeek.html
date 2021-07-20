@@ -2272,11 +2272,11 @@ makes things slightly easier to use the alternate formulation:
 
   $$ Ax + By + Cz = D $$
 
-(We didnt' flip the sign of D because it's just some constant we'll figure out later.)
+(We didn't flip the sign of D because it's just some constant that we'll figure out later.)
 
 Here's another way to think of this formula: given the plane perpendicular to the normal vector
-$\mathbf{n} = (A,B,C)$ and the position vector $\mathbf{v} = (x,y,z)$ (that is, the vector from the
-origin to some the arbitrary point $(x,y,z)$), then
+$\mathbf{n} = (A,B,C)$, and the position vector $\mathbf{v} = (x,y,z)$ (that is, the vector from the
+origin to any point on the plane), then
 
   $$ \mathbf{n} \cdot \mathbf{v} = D $$
 
@@ -2293,7 +2293,7 @@ Solving for $t$:
 
   $$ t = \frac{D - \mathbf{n} \cdot \mathbf{P}}{\mathbf{n} \cdot \mathbf{d}} $$
 
-This gives us $t$, which in turn can be used in the ray equation to find the point of intersection.
+This gives us $t$, which we can plug into the ray equation to find the point of intersection.
 
 Ok, we can find the point of intersection between a ray and a plane. This will help us determine
 whether a ray hits a given quadrilateral, using the plane that contains the (planar) quadrilateral.
@@ -2303,8 +2303,8 @@ later).
 We now have three questions we must answer:
 
 1. How do we define the quadrilateral in three dimensional space?
-2. How do we find the plane that contains the quadrilateral?
-3. How do we orient the ray-plane intersection point with the quadrilateral?
+2. How do we find the plane that contains that quadrilateral?
+3. How do we orient the ray-plane intersection point within the quadrilateral?
 
 
 Defining the Quadrilateral
@@ -2320,6 +2320,10 @@ quadrilateral where opposite sides are parallel. These three entities are
    gives the upper left corner.
 
 These values are three-dimensional, even though a quad itself is a two-dimensional object.
+
+The following figure illustrates the quadrilateral components.
+
+  ![Figure [quad-def]: Quadrilateral Components](../images/fig-2.x1-quad-def.jpg)
 
 
 Finding the Plane Constants For a Given Quadrilateral
