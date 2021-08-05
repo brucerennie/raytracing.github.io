@@ -2554,6 +2554,14 @@ That's the last piece needed to implement quadrilateral primitives.
 
 More Planar Primitives
 -----------------------
+You may have noticed that if you have the 2D planar coordinates of a hit point, you can implement
+arbitrary 2D shapes -- not just parallelograms. In fact, you'd only need to change the `hit_ab`
+method above to determine if the (a,b) coordinates lie inside your 2D primitive, and set the texture
+UV coordinates if so.
+
+We'll leave these additional 2D primitives as an exercise to the reader, depending on your desire to
+play with this. Consider triangles, disks, and rings. You could even create cut-out stencils based
+on the texture map!
 
 
 
