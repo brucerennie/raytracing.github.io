@@ -2326,7 +2326,7 @@ The following figure illustrates the quadrilateral components.
   ![Figure [quad-def]: Quadrilateral Components](../images/fig-2.x1-quad-def.jpg)
 
 
-Finding the Plane Constants For a Given Quadrilateral
+Finding the Plane That Contains a Given Quadrilateral
 ------------------------------------------------------
 We have $O$, $u$, and $v$, and want the corresponding equation of the plane containing all three of
 these values (and thus the quad itself).
@@ -2445,93 +2445,99 @@ $$ \beta  = \mathbf{w} \cdot (\mathbf{u} \times \mathbf{p}) $$
 
 Implementing Quadrilateral Primitives
 --------------------------------------
+Now that we have the intersection point's planar coordinates $\alpha$ and $\beta$, we can easily
+use these to determine if the intersection point is inside the quadrilateral -- that is, if the ray
+actually hit the quadrilateral.
+
+The plane is divided into coordinate regions like so:
 
   ![Figure [quad-coords]: Quadrilateral coordinates](../images/fig-2.06-quad-coords.jpg)
 
 
-                          @@@@@@@@@@@@@@@ @@@@@@@@@@@@@@@ @@@@@@@@@@@@@@@
+Thus, to see if a point with planar coordinates $(\alpha,\beta)$ lies inside the quadrilateral, it
+needs to meet the following criteria:
 
+  1. $ 0 \leq \alpha \leq 1 $
+  2. $ 0 \leq \beta \leq 1 $
 
-Now, let’s make some rectangles. Rectangles are often convenient for modeling man-made environments.
-I’m a fan of doing axis-aligned rectangles because they are easy. (We’ll get to instancing so we can
-rotate them later.)
-
-<div class='together'>
-First, here is a rectangle in an xy plane. Such a plane is defined by its z value. For example, $z =
-k$. An axis-aligned rectangle is defined by the lines $x=x_0$, $x=x_1$, $y=y_0$, and $y=y_1$.
-
-  ![Figure [ray-rect]: Ray-rectangle intersection](../images/fig-2.05-ray-rect.jpg)
-
-</div>
-
-<div class='together'>
-To determine whether a ray hits such a rectangle, we first determine where the ray hits the plane.
-Recall that a ray $\mathbf{P}(t) = \mathbf{A} + t \mathbf{b}$ has its z component defined by $P_z(t)
-= A_z + t b_z$. Rearranging those terms we can solve for what the t is where $z=k$.
-
-  $$ t = \frac{k-A_z}{b_z} $$
-</div>
-
-<div class='together'>
-Once we have $t$, we can plug that into the equations for $x$ and $y$:
-
-  $$ x = A_x + t b_x $$
-  $$ y = A_y + t b_y $$
-</div>
-
-It is a hit if $x_0 < x < x_1$ and $y_0 < y < y_1$.
-
-Because our rectangles are axis-aligned, their bounding boxes will have an infinitely-thin side.
-This can be a problem when dividing them up with our axis-aligned bounding volume hierarchy. To
-counter this, all hittable objects should get a bounding box that has finite width along every
-dimension. For our rectangles, we'll just pad the box a bit on the infnitely-thin side.
-
-<div class='together'>
-The actual `xy_rect` class is thus:
+That's the last piece needed to implement quadrilateral primitives.
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    #ifndef AARECT_H
-    #define AARECT_H
+    #ifndef QUAD_H
+    #define QUAD_H
 
     #include "rtweekend.h"
 
     #include "hittable.h"
 
-    class xy_rect : public hittable {
+    class quad : public hittable {
       public:
-        xy_rect() {}
+        quad(const point3& o, const vec3& aa, const vec3& ab, shared_ptr<material> m)
+          : plane_origin(o), axis_A(aa), axis_B(ab), mat(m)
+        {
+            auto n = cross(axis_A, axis_B);
+            normal = unit_vector(n);
+            D = -dot(normal, plane_origin);
+            w = n / dot(n,n);
 
-        xy_rect(double _x0, double _x1, double _y0, double _y1, double _k, shared_ptr<material> _m)
-          : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mat(_m),
-            bbox(point3(x0, y0, k-0.0001), point3(x1, y1, k+0.0001))
-        {}
+            set_bounding_box();
+        }
 
-        bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
-            auto t = (k-r.origin().z()) / r.direction().z();
-            if (!ray_t.contains(t))
-                return false;
-
-            auto x = r.origin().x() + t*r.direction().x();
-            auto y = r.origin().y() + t*r.direction().y();
-            if (x < x0 || x1 < x || y < y0 || y1 < y)
-                return false;
-
-            rec.u = (x-x0)/(x1-x0);
-            rec.v = (y-y0)/(y1-y0);
-            rec.t = t;
-            auto outward_normal = vec3(0, 0, 1);
-            rec.set_face_normal(r, outward_normal);
-            rec.mat = mat;
-            rec.p = r.at(t);
-
-            return true;
+        virtual void set_bounding_box() {
+            bbox = aabb(plane_origin, plane_origin + axis_A + axis_B).pad();
         }
 
         aabb bounding_box() const override { return bbox; }
 
-      public:
-        double x0, x1, y0, y1, k;
+        virtual bool hit_ab(double a, double b, hit_record& rec) const {
+            // Given the hit point in plane coordinates, return false if it is outside the
+            // primitive, otherwise set the hit record UV coordinates and return true.
+
+            if ((a < 0) || (1 < a) || (b < 0) || (1 < b))
+                return false;
+
+            rec.u = a;
+            rec.v = b;
+            return true;
+        }
+
+        bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+            auto denom = dot(normal, r.direction());
+
+            // No hit if the ray is parallel to the plane.
+            if (fabs(denom) < 1e-8)
+                return false;
+
+            // Return false if the hit point parameter t is outside the ray interval.
+            auto t = (-D - dot(normal, r.origin())) / denom;
+            if (!ray_t.contains(t))
+                return false;
+
+            // Determine the hit point lies within the planar shape using its plane coordinates.
+            auto intersection = r.at(t);
+            vec3 planar_hitpt_vector = intersection - plane_origin;
+            auto a = dot(w, cross(planar_hitpt_vector, axis_B));
+            auto b = dot(w, cross(axis_A, planar_hitpt_vector));
+
+            if (!hit_ab(a, b, rec))
+                return false;
+
+            // Ray hits the 2D shape; set the rest of the hit record and return true.
+            rec.t = t;
+            rec.p = intersection;
+            rec.mat = mat;
+            rec.set_face_normal(r, normal);
+
+            return true;
+        }
+
+      protected:
+        point3 plane_origin;
+        vec3 axis_A, axis_B;
         shared_ptr<material> mat;
+        vec3 normal;
+        double D;
+        vec3 w;
         aabb bbox;
     };
 
