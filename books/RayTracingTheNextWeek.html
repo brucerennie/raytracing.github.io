@@ -2475,6 +2475,8 @@ That's the last piece needed to implement quadrilateral primitives.
 
     #include "hittable.h"
 
+    #include <cmath>
+
     class quad : public hittable {
       public:
         quad(const point3& o, const vec3& aa, const vec3& ab, shared_ptr<material> m)
@@ -2729,7 +2731,7 @@ If we set up a rectangle as a light:
         world.add(make_shared<sphere>(point3(0,2,0), 2, make_shared<lambertian>(pertext)));
 
         auto difflight = make_shared<diffuse_light>(color(4,4,4));
-        world.add(make_shared<xy_rect>(3, 5, 1, 3, -2, difflight));
+        world.add(make_shared<quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), difflight));
     }
 
     int main() {
@@ -2769,7 +2771,7 @@ Fool around with making some spheres lights too.
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
         world.add(make_shared<sphere>(point3(0,7,0), 2, difflight));
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-        world.add(make_shared<xy_rect>(3, 5, 1, 3, -2, difflight));
+        world.add(make_shared<quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), difflight));
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [rect-light]: <kbd>[main.cc]</kbd> A simple rectangle light plus illuminating ball]
@@ -2803,12 +2805,12 @@ Let’s make the 5 walls and the light of the box:
         auto green = make_shared<lambertian>(color(.12, .45, .15));
         auto light = make_shared<diffuse_light>(color(15, 15, 15));
 
-        world.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
-        world.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
-        world.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
-        world.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
-        world.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
-        world.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+        world.add(make_shared<quad>(point3(555,0,0), vec3(0,555,0), vec3(0,0,555), green));
+        world.add(make_shared<quad>(point3(0,0,0), vec3(0,555,0), vec3(0,0,555), red));
+        world.add(make_shared<quad>(point3(343, 554, 332), vec3(-130,0,0), vec3(0,0,-105), light));
+        world.add(make_shared<quad>(point3(0,0,0), vec3(555,0,0), vec3(0,0,555), white));
+        world.add(make_shared<quad>(point3(555,555,555), vec3(-555,0,0), vec3(0,0,-555), white));
+        world.add(make_shared<quad>(point3(0,0,555), vec3(555,0,0), vec3(0,555,0), white));
     }
 
     int main() {
@@ -2847,56 +2849,54 @@ The Cornell Box usually has two blocks in it. These are rotated relative to the 
 make an axis-aligned block primitive that holds 6 rectangles:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    #ifndef BOX_H
-    #define BOX_H
-
-    #include "rtweekend.h"
-
-    #include "aarect.h"
+    ...
     #include "hittable_list.h"
+    ...
+    inline shared_ptr<hittable_list> box(const point3& a, const point3& b, shared_ptr<material> mat)
+    {
+        // Returns the 3D box (six sides) that contains the two opposite vertices a & b.
 
-    class box : public hittable {
-      public:
-        box() {}
+        auto sides = make_shared<hittable_list>();
 
-        box(const point3& p0, const point3& p1, shared_ptr<material> mat)
-          : box_min(p0), box_max(p1), bbox(p0, p1)
-        {
-            sides.add(make_shared<xy_rect>(p0.x(), p1.x(), p0.y(), p1.y(), p1.z(), mat));
-            sides.add(make_shared<xy_rect>(p0.x(), p1.x(), p0.y(), p1.y(), p0.z(), mat));
+        // Construct the two opposite vertices with the minimum and maximum coordinates.
+        auto min = point3(fmin(a.x(), b.x()), fmin(a.y(), b.y()), fmin(a.z(), b.z()));
+        auto max = point3(fmax(a.x(), b.x()), fmax(a.y(), b.y()), fmax(a.z(), b.z()));
 
-            sides.add(make_shared<xz_rect>(p0.x(), p1.x(), p0.z(), p1.z(), p1.y(), mat));
-            sides.add(make_shared<xz_rect>(p0.x(), p1.x(), p0.z(), p1.z(), p0.y(), mat));
+        auto dx = vec3(max.x() - min.x(), 0, 0);
+        auto dy = vec3(0, max.y() - min.y(), 0);
+        auto dz = vec3(0, 0, max.z() - min.z());
 
-            sides.add(make_shared<yz_rect>(p0.y(), p1.y(), p0.z(), p1.z(), p1.x(), mat));
-            sides.add(make_shared<yz_rect>(p0.y(), p1.y(), p0.z(), p1.z(), p0.x(), mat));
-        }
+        sides->add(make_shared<quad>(point3(min.x(), min.y(), max.z()),  dx,  dy, mat)); // front
+        sides->add(make_shared<quad>(point3(max.x(), min.y(), max.z()), -dz,  dy, mat)); // right
+        sides->add(make_shared<quad>(point3(max.x(), min.y(), min.z()), -dx,  dy, mat)); // back
+        sides->add(make_shared<quad>(point3(min.x(), min.y(), min.z()),  dz,  dy, mat)); // left
+        sides->add(make_shared<quad>(point3(min.x(), max.y(), max.z()),  dx, -dz, mat)); // top
+        sides->add(make_shared<quad>(point3(min.x(), min.y(), min.z()),  dx,  dz, mat)); // bottom
 
-        bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
-            return sides.hit(r, ray_t, rec);
-        }
-
-        aabb bounding_box() const override { return bbox; }
-
-      public:
-        point3 box_min;
-        point3 box_max;
-        hittable_list sides;
-        aabb bbox;
-    };
-
-    #endif
+        return sides;
+    }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    [Listing [box-class]: <kbd>[box.h]</kbd> A box object]
+    [Listing [box-class]: <kbd>[quad.h]</kbd> A box object]
 
 <div class='together'>
 Now we can add two blocks (but not rotated)
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    #include "box.h"
-    ...
-    objects.add(make_shared<box>(point3(130, 0, 65), point3(295, 165, 230), white));
-    objects.add(make_shared<box>(point3(265, 0, 295), point3(430, 330, 460), white));
+    void cornell_box(scene& scene_desc) {
+        ...
+        world.add(make_shared<quad>(point3(555,0,0), vec3(0,555,0), vec3(0,0,555), green));
+        world.add(make_shared<quad>(point3(0,0,0), vec3(0,555,0), vec3(0,0,555), red));
+        world.add(make_shared<quad>(point3(343, 554, 332), vec3(-130,0,0), vec3(0,0,-105), light));
+        world.add(make_shared<quad>(point3(0,0,0), vec3(555,0,0), vec3(0,0,555), white));
+        world.add(make_shared<quad>(point3(555,555,555), vec3(-555,0,0), vec3(0,0,-555), white));
+        world.add(make_shared<quad>(point3(0,0,555), vec3(555,0,0), vec3(0,555,0), white));
+
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        world.add(make_shared<box>(point3(130, 0, 65), point3(295, 165, 230), white));
+        world.add(make_shared<box>(point3(265, 0, 295), point3(430, 330, 460), white));
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [add-boxes]: <kbd>[main.cc]</kbd> Adding box objects]
 
@@ -3134,16 +3134,16 @@ And the changes to Cornell are:
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     void cornell_box(scene& scene_desc) {
         ...
-        world.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+        world.add(make_shared<quad>(point3(0,0,555), vec3(555,0,0), vec3(0,555,0), white));
 
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-        shared_ptr<hittable> box1 = make_shared<box>(point3(0, 0, 0), point3(165, 330, 165), white);
+        shared_ptr<hittable> box1 = box(point3(0,0,0), point3(165,330,165), white);
         box1 = make_shared<rotate_y>(box1, 15);
         box1 = make_shared<translate>(box1, vec3(265,0,295));
         world.add(box1);
 
-        shared_ptr<hittable> box2 = make_shared<box>(point3(0,0,0), point3(165,165,165), white);
+        shared_ptr<hittable> box2 = box(point3(0,0,0), point3(165,165,165), white);
         box2 = make_shared<rotate_y>(box2, -18);
         box2 = make_shared<translate>(box2, vec3(130,0,65));
         world.add(box2);
@@ -3337,18 +3337,18 @@ bigger (and dimmer so it doesn’t blow out the scene) for faster convergence:
         auto green = make_shared<lambertian>(color(.12, .45, .15));
         auto light = make_shared<diffuse_light>(color(7, 7, 7));
 
-        world.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
-        world.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
-        world.add(make_shared<xz_rect>(113, 443, 127, 432, 554, light));
-        world.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
-        world.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
-        world.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+        world.add(make_shared<quad>(point3(555,0,0), vec3(0,555,0), vec3(0,0,555), green));
+        world.add(make_shared<quad>(point3(0,0,0), vec3(0,555,0), vec3(0,0,555), red));
+        world.add(make_shared<quad>(point3(113,554,127), vec3(330,0,0), vec3(0,0,305), light));
+        world.add(make_shared<quad>(point3(0,555,0), vec3(555,0,0), vec3(0,0,555), white));
+        world.add(make_shared<quad>(point3(0,0,0), vec3(555,0,0), vec3(0,0,555), white));
+        world.add(make_shared<quad>(point3(0,0,555), vec3(555,0,0), vec3(0,555,0), white));
 
-        shared_ptr<hittable> box1 = make_shared<box>(point3(0,0,0), point3(165,330,165), white);
+        shared_ptr<hittable> box1 = box(point3(0,0,0), point3(165,330,165), white);
         box1 = make_shared<rotate_y>(box1, 15);
         box1 = make_shared<translate>(box1, vec3(265,0,295));
 
-        shared_ptr<hittable> box2 = make_shared<box>(point3(0,0,0), point3(165,165,165), white);
+        shared_ptr<hittable> box2 = box(point3(0,0,0), point3(165,165,165), white);
         box2 = make_shared<rotate_y>(box2, -18);
         box2 = make_shared<translate>(box2, vec3(130,0,65));
 
@@ -3426,7 +3426,7 @@ why we get caustics and subsurface for free. It’s a double-edged design decisi
                 auto y1 = random_double(1,101);
                 auto z1 = z0 + w;
 
-                boxes1.add(make_shared<box>(point3(x0,y0,z0), point3(x1,y1,z1), ground));
+                boxes1.add(box(point3(x0,y0,z0), point3(x1,y1,z1), ground));
             }
         }
 
@@ -3435,7 +3435,7 @@ why we get caustics and subsurface for free. It’s a double-edged design decisi
         world.add(make_shared<bvh_node>(boxes1));
 
         auto light = make_shared<diffuse_light>(color(7, 7, 7));
-        world.add(make_shared<xz_rect>(123, 423, 147, 412, 554, light));
+        world.add(make_shared<quad>(point3(123,554,147), vec3(300,0,0), vec3(0,0,265), light));
 
         auto center1 = point3(400, 400, 200);
         auto center2 = center1 + vec3(30,0,0);
@@ -3473,10 +3473,12 @@ why we get caustics and subsurface for free. It’s a double-edged design decisi
         );
     }
 
+
     void default_scene(scene& scene_desc) {
         final_scene(scene_desc);
         scene_desc.image_width       = 400;
-        scene_desc.samples_per_pixel = 100;
+        scene_desc.samples_per_pixel = 250;
+        scene_desc.max_depth         = 4;
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
 
