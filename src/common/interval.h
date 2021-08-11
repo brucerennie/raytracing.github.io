@@ -18,6 +18,14 @@ class interval {
     interval(const interval& a, const interval& b)
       : min(fmin(a.min, b.min)), max(fmax(a.max, b.max)) {}
 
+    double size() const {
+        return max - min;
+    }
+
+    interval expand(double delta) const {
+        return interval(min - delta/2, max + delta/2);
+    }
+
     bool contains(double x) const {
         return min <= x && x <= max;
     }
@@ -27,6 +35,9 @@ class interval {
         if (x > max) return max;
         return x;
     }
+
+/// Toying with the idea of a global constant [0,1] interval, since it's used in multiple
+/// places. Alternate name: `interval::zero_one`.
 
     static const interval empty, universe;
 

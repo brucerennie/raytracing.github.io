@@ -11,7 +11,7 @@
 
 #include "rtweekend.h"
 
-#include "box.h"
+#include "aarect.h"
 #include "bvh.h"
 #include "camera.h"
 #include "color.h"
@@ -19,6 +19,7 @@
 #include "hittable_list.h"
 #include "material.h"
 #include "moving_sphere.h"
+#include "quad.h"
 #include "scene.h"
 #include "sphere.h"
 #include "texture.h"
@@ -187,12 +188,12 @@ void cornell_box(scene& scene_desc) {
     world.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
     world.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
 
-    shared_ptr<hittable> box1 = make_shared<box>(point3(0,0,0), point3(165,330,165), white);
+    shared_ptr<hittable> box1 = box(point3(0,0,0), point3(165,330,165), white);
     box1 = make_shared<rotate_y>(box1, 15);
     box1 = make_shared<translate>(box1, vec3(265,0,295));
     world.add(box1);
 
-    shared_ptr<hittable> box2 = make_shared<box>(point3(0,0,0), point3(165,165,165), white);
+    shared_ptr<hittable> box2 = box(point3(0,0,0), point3(165,165,165), white);
     box2 = make_shared<rotate_y>(box2, -18);
     box2 = make_shared<translate>(box2, vec3(130,0,65));
     world.add(box2);
@@ -224,11 +225,11 @@ void cornell_smoke(scene& scene_desc) {
     world.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
     world.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
 
-    shared_ptr<hittable> box1 = make_shared<box>(point3(0,0,0), point3(165,330,165), white);
+    shared_ptr<hittable> box1 = box(point3(0,0,0), point3(165,330,165), white);
     box1 = make_shared<rotate_y>(box1, 15);
     box1 = make_shared<translate>(box1, vec3(265,0,295));
 
-    shared_ptr<hittable> box2 = make_shared<box>(point3(0,0,0), point3(165,165,165), white);
+    shared_ptr<hittable> box2 = box(point3(0,0,0), point3(165,165,165), white);
     box2 = make_shared<rotate_y>(box2, -18);
     box2 = make_shared<translate>(box2, vec3(130,0,65));
 
@@ -262,7 +263,7 @@ void final_scene(scene& scene_desc) {
             auto y1 = random_double(1,101);
             auto z1 = z0 + w;
 
-            boxes1.add(make_shared<box>(point3(x0,y0,z0), point3(x1,y1,z1), ground));
+            boxes1.add(box(point3(x0,y0,z0), point3(x1,y1,z1), ground));
         }
     }
 
@@ -318,6 +319,41 @@ void default_scene(scene& scene_desc) {
 }
 
 
+void quad_test(scene& scene_desc) {
+    scene_desc.image_width       = 400;
+    scene_desc.aspect_ratio      = 1.0;
+    scene_desc.samples_per_pixel = 4;
+    scene_desc.max_depth         = 4;
+
+    scene_desc.cam.aperture = 0.0;
+    scene_desc.cam.vfov     = 20.0;
+    scene_desc.cam.lookfrom = point3(0,0,12);
+    scene_desc.cam.lookat   = point3(0,0,0);
+
+    auto earth_texture = make_shared<image_texture>("earthmap.jpg");
+    auto mat = make_shared<lambertian>(earth_texture);
+
+    shared_ptr<hittable> thing;
+    switch (0) {
+        default:
+        case 0:
+            thing = make_shared<quad>(point3(-2,-1,0), vec3(4,0,0), vec3(0,2,0), mat);
+            break;
+        case 1:
+            thing = make_shared<tri>(point3(-2,-1,0), vec3(4,0,0), vec3(0,2,0), mat);
+            break;
+        case 2:
+            thing = make_shared<ellipse>(point3(0,0,0), vec3(2,0,0), vec3(0,1,0), mat);
+            break;
+        case 3:
+            thing = make_shared<annulus>(point3(0,0,0), vec3(2,0,0), vec3(0,1,0), 0.25, mat);
+            break;
+    }
+
+    scene_desc.world.add(thing);
+}
+
+
 int main() {
     scene scene_desc;
 
@@ -336,6 +372,8 @@ int main() {
         case 8:  final_scene(scene_desc);        break;
         default:
         case 9:  default_scene(scene_desc);      break;
+
+        case 100: quad_test(scene_desc); break;
     }
 
     scene_desc.render();
